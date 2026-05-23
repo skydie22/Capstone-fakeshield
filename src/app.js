@@ -14,6 +14,7 @@ import { errorHandler, notFound } from './middleware/errorHandler.js';
 import categoryRoutes from './routes/category.route.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger.js';
+import newsRoutes from './routes/news.routes.js';
 
 
 const app = express();
@@ -63,6 +64,7 @@ app.use('/api/history', historyRoutes );
 app.use('/api/trends', trendRoutes);
 app.use('/api/stats', statRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/news', newsRoutes);
 
 // ─── Error Handling ──────────────────────────────────────────────────────────
 app.use(notFound);
