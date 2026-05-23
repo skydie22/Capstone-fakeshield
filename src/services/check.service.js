@@ -70,12 +70,15 @@ const runCheck = async ({ userId = null, text }) => {
  * Get all history for a user
  */
 
-const getHistory = async ({ page = 1, limit = 10 } = {}) => {
+const getHistory = async (userId,{ page = 1, limit = 10 } = {}) => {
   const skip = (page - 1) * limit;
 
   const [total, checks] = await Promise.all([
-    prisma.check.count(),
+    prisma.check.count({
+      where: { userId },
+    }),
     prisma.check.findMany({
+      where: { userId },
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },

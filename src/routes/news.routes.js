@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { getNews } from '../controllers/news.controller.js';
-import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -31,6 +30,6 @@ const router = Router();
  *       502:
  *         description: Gagal mengambil dari NewsAPI
  */
-router.get('/', authenticate, getNews);
+router.get('/', getNews);
 
 export default router;

@@ -20,10 +20,11 @@ const runCheck = async (req, res, next) => {
 
 const getHistory = async (req, res, next) => {
   try {
+    const userId = req.user.id;
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 10, 50);
 
-    const result = await checkService.getHistory({ page, limit });
+    const result = await checkService.getHistory(userId, { page, limit });
 
     res.status(200).json({ success: true, ...result });
   } catch (error) {
