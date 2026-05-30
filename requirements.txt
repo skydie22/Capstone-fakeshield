@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+tensorflow
+pydantic
+python-multipart
+tensorboard
+prometheus-client
+psutil
+pytest
+httpx
+numpy
+pandas
