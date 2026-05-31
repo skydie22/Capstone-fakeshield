@@ -54,15 +54,7 @@ const Dashboard = () => {
   // Data Fallback (Sampel) agar grafik selalu tampil meskipun kosong atau belum login
   const displayTrends = useMemo(() => {
     if (!trends.data || trends.data.length === 0) {
-      return [
-        { date: '2026-05-25', hoaxCount: 12, validCount: 18 },
-        { date: '2026-05-26', hoaxCount: 15, validCount: 14 },
-        { date: '2026-05-27', hoaxCount: 8, validCount: 22 },
-        { date: '2026-05-28', hoaxCount: 20, validCount: 15 },
-        { date: '2026-05-29', hoaxCount: 14, validCount: 25 },
-        { date: '2026-05-30', hoaxCount: 10, validCount: 30 },
-        { date: '2026-05-31', hoaxCount: 18, validCount: 20 },
-      ];
+      return [];
     }
     
     // Recharts butuh minimal 2 titik data untuk menggambar garis/area.
@@ -148,56 +140,56 @@ const Dashboard = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        // News selalu publik
-        const newsRes = await publicApi.get('/api/news?pageSize=10').catch(() => ({ data: { data: { articles: [] } } }));
-        const newsData = newsRes.data?.data;
-        setNews({ 
-          data: newsData?.articles || [], 
-          pagination: { totalResults: newsData?.totalResults || 0 }, 
-          loading: false, 
-          error: false 
-        });
+  const fetchDashboardData = async () => {
+    try {
+      // News selalu publik
+      const newsRes = await publicApi.get('/api/news?pageSize=10').catch(() => ({ data: { data: { articles: [] } } }));
+      const newsData = newsRes.data?.data;
+      setNews({ 
+        data: newsData?.articles || [], 
+        pagination: { totalResults: newsData?.totalResults || 0 }, 
+        loading: false, 
+        error: false 
+      });
 
-        // Hanya fetch stats, trends, dan categories jika login
-        if (isAuthenticated) {
-          const axiosInstance = api;
-          const [statsRes, trendsRes, catRes] = await Promise.all([
-            axiosInstance.get('/api/stats').catch(() => ({
+      // Hanya fetch stats, trends, dan categories jika login
+      if (isAuthenticated) {
+        const axiosInstance = api;
+        const [statsRes, trendsRes, catRes] = await Promise.all([
+          axiosInstance.get('/api/stats').catch(() => ({
+            data: {
               data: {
-                data: {
-                  totalChecks: 0,
-                  totalHoax: 0,
-                  totalValid: 0,
-                  accuracy: null,
-                  accuracyStatus: 'placeholder',
-                  accuracyMessage: 'Akurasi model belum tersedia'
-                }
+                totalChecks: 0,
+                totalHoax: 0,
+                totalValid: 0,
+                accuracy: null,
+                accuracyStatus: 'placeholder',
+                accuracyMessage: 'Akurasi model belum tersedia'
               }
-            })),
-            axiosInstance.get('/api/trends').catch(() => ({ data: { data: [] } })),
-            axiosInstance.get('/api/categories').catch(() => ({ data: { data: [] } }))
-          ]);
+            }
+          })),
+          axiosInstance.get('/api/trends').catch(() => ({ data: { data: [] } })),
+          axiosInstance.get('/api/categories').catch(() => ({ data: { data: [] } }))
+        ]);
 
-          const statsData = statsRes.data?.data || statsRes.data;
-          setStats({ ...statsData, loading: false });
-          setTrends({ data: trendsRes.data?.data || [], loading: false, error: false });
-          setCategories({ data: catRes.data?.data || [], loading: false, error: false });
-        } else {
-          // Jika tidak login, set loading ke false agar UI tidak berputar selamanya
-          setStats(prev => ({ ...prev, loading: false }));
-          setTrends(prev => ({ ...prev, loading: false }));
-          setCategories(prev => ({ ...prev, loading: false }));
-        }
-      } catch (error) {
-        console.error("Dashboard fetch error:", error);
-        setNews(prev => ({ ...prev, loading: false, error: true }));
+        const statsData = statsRes.data?.data || statsRes.data;
+        setStats({ ...statsData, loading: false });
+        setTrends({ data: trendsRes.data?.data || [], loading: false, error: false });
+        setCategories({ data: catRes.data?.data || [], loading: false, error: false });
+      } else {
+        // Jika tidak login, set loading ke false agar UI tidak berputar selamanya
         setStats(prev => ({ ...prev, loading: false }));
+        setTrends(prev => ({ ...prev, loading: false }));
+        setCategories(prev => ({ ...prev, loading: false }));
       }
-    };
-    
+    } catch (error) {
+      console.error("Dashboard fetch error:", error);
+      setNews(prev => ({ ...prev, loading: false, error: true }));
+      setStats(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  useEffect(() => {
     fetchDashboardData();
 
     if (isAuthenticated) {
@@ -206,6 +198,11 @@ const Dashboard = () => {
       setHistory({ data: [], loading: false, error: false });
     }
   }, [isAuthenticated]);
+
+  const handleCloseResult = () => {
+    setActiveResult(null);
+    fetchDashboardData(); // Refresh statistik saat hasil ditutup
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-12 py-8">
@@ -295,7 +292,7 @@ const Dashboard = () => {
                <div className="flex items-center gap-4">
                   {activeResult && (
                     <button 
-                      onClick={() => setActiveResult(null)}
+                      onClick={handleCloseResult}
                       className="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-widest transition-colors"
                     >
                       Lihat Statistik Global
@@ -345,7 +342,7 @@ const Dashboard = () => {
                                   </button>
                                 )}
                                 <button 
-                                  onClick={() => setActiveResult(null)}
+                                  onClick={handleCloseResult}
                                   className="bg-white border border-gray-200 text-gray-700 px-5 py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-colors"
                                 >
                                   Tutup
@@ -415,59 +412,75 @@ const Dashboard = () => {
                   ) : (
                     /* Charts Row */
                     <div className="flex-1 flex flex-col md:flex-row items-center gap-6 min-h-[300px]">
-                      <div className="flex-1 w-full h-[250px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={displayTrends}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                              <XAxis dataKey="date" tickFormatter={(d) => new Date(d).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})} tick={{fontSize: 12}} axisLine={false} tickLine={false} />
-                              <YAxis tick={{fontSize: 12}} axisLine={false} tickLine={false} />
-                              <Tooltip />
-                              <Legend iconType="circle" wrapperStyle={{fontSize: 12}} />
-                              <Area type="monotone" dataKey="hoaxCount" name="Hoaks" stroke="#DC2626" fill="#FEE2E2" strokeWidth={2} />
-                              <Area type="monotone" dataKey="validCount" name="Valid" stroke="#16A34A" fill="#DCFCE7" strokeWidth={2} />
-                            </AreaChart>
-                          </ResponsiveContainer>
+                      <div className="flex-1 w-full h-[250px] flex items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-gray-100">
+                          {displayTrends.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart data={displayTrends}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                                <XAxis dataKey="date" tickFormatter={(d) => new Date(d).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})} tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                                <YAxis tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                                <Tooltip />
+                                <Legend iconType="circle" wrapperStyle={{fontSize: 12}} />
+                                <Area type="monotone" dataKey="hoaxCount" name="Hoaks" stroke="#DC2626" fill="#FEE2E2" strokeWidth={2} />
+                                <Area type="monotone" dataKey="validCount" name="Valid" stroke="#16A34A" fill="#DCFCE7" strokeWidth={2} />
+                              </AreaChart>
+                            </ResponsiveContainer>
+                          ) : (
+                            <div className="flex flex-col items-center text-gray-400 gap-2">
+                              <svg className="w-8 h-8 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                              <span className="text-[10px] font-bold uppercase tracking-widest">Tren data belum tersedia</span>
+                            </div>
+                          )}
                       </div>
-                      <div className="w-full md:w-[300px] h-[250px] relative flex items-center justify-center">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie 
-                                data={displayCategories} 
-                                cx="50%" 
-                                cy="50%" 
-                                innerRadius={65} 
-                                outerRadius={85} 
-                                paddingAngle={5}
-                                dataKey="count" 
-                                nameKey="name"
-                                stroke="none"
-                              >
-                                {displayCategories.map((entry, index) => {
-                                  const name = entry.name?.toLowerCase() || '';
-                                  let color = APP_COLORS.neutral;
-                                  if (name === 'hoaks') color = APP_COLORS.danger;
-                                  else if (name === 'valid' || name === 'bukan_hoaks') color = APP_COLORS.success;
-                                  else if (name.includes('hoaks')) color = APP_COLORS.danger;
-                                  else if (name.includes('valid')) color = APP_COLORS.success;
+                      <div className="w-full md:w-[300px] h-[250px] relative flex items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-gray-100">
+                          {displayCategories.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie 
+                                  data={displayCategories} 
+                                  cx="50%" 
+                                  cy="50%" 
+                                  innerRadius={65} 
+                                  outerRadius={85} 
+                                  paddingAngle={5}
+                                  dataKey="count" 
+                                  nameKey="name"
+                                  stroke="none"
+                                >
+                                  {displayCategories.map((entry, index) => {
+                                    const name = entry.name?.toLowerCase() || '';
+                                    let color = APP_COLORS.neutral;
+                                    if (name === 'hoaks') color = APP_COLORS.danger;
+                                    else if (name === 'valid' || name === 'bukan_hoaks') color = APP_COLORS.success;
+                                    else if (name.includes('hoaks')) color = APP_COLORS.danger;
+                                    else if (name.includes('valid')) color = APP_COLORS.success;
 
-                                  return <Cell key={`cell-${index}`} fill={color} />;
-                                })}
-                              </Pie>
-                              <Tooltip 
-                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                                formatter={(value, name) => [`${value} Artikel`, name]} 
-                              />
-                              <Legend iconType="circle" wrapperStyle={{fontSize: 10, paddingTop: 10}} />
-                            </PieChart>
-                          </ResponsiveContainer>
+                                    return <Cell key={`cell-${index}`} fill={color} />;
+                                  })}
+                                </Pie>
+                                <Tooltip 
+                                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                  formatter={(value, name) => [`${value} Artikel`, name]} 
+                                />
+                                <Legend iconType="circle" wrapperStyle={{fontSize: 10, paddingTop: 10}} />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          ) : (
+                            <div className="flex flex-col items-center text-gray-400 gap-2">
+                              <svg className="w-8 h-8 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.488 9H15V3.512A9.025 9.003 0 0120.488 9z"></path></svg>
+                              <span className="text-[10px] font-bold uppercase tracking-widest">Kategori belum tersedia</span>
+                            </div>
+                          )}
                           
                           {/* Label Tengah Donut */}
-                          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
-                             <span className="text-[22px] font-black text-gray-900 leading-none">
-                               {displayCategories.reduce((acc, curr) => acc + (curr.count || 0), 0)}
-                             </span>
-                             <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">Total Data</span>
-                          </div>
+                          {displayCategories.length > 0 && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
+                               <span className="text-[22px] font-black text-gray-900 leading-none">
+                                 {displayCategories.reduce((acc, curr) => acc + (curr.count || 0), 0)}
+                               </span>
+                               <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">Total Data</span>
+                            </div>
+                          )}
                       </div>
                     </div>
                   )}

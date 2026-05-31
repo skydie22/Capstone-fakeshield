@@ -60,7 +60,7 @@ const CheckForm = ({ onResult, onLoading }) => {
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Tempelkan isi berita di sini untuk dianalisis..."
+          placeholder="Tempelkan isi berita atau judul di sini untuk dianalisis..."
           className="w-full flex-1 p-5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1E293B] focus:border-transparent resize-none text-gray-700 bg-gray-50"
         />
       </div>
