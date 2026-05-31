@@ -1,7 +1,7 @@
 import prisma from '../config/prisma.js';
 
 const getStats = async () => {
-  const [totalChecks, totalHoax, totalValid] = await Promise.all([
+  const [totalChecks, totalHoax, totalValid, avgConfidence] = await Promise.all([
     prisma.check.count(),
     prisma.check.count({
       where: {
@@ -14,15 +14,22 @@ const getStats = async () => {
         label: { equals: 'VALID', mode: 'insensitive' },
       },
     }),
+    prisma.check.aggregate({
+      _avg : {confidence: true},
+    }),
   ]);
+
+
+  const accuracy = avgConfidence._avg.confidence ? parseFloat((avgConfidence._avg.confidence * 100).toFixed(1)): null;
 
   return {
     totalChecks,
     totalValid,
     totalHoax,
-    accuracy: null,
-    accuracyStatus: 'placeholder',
-    accuracyMessage: 'Akurasi model belum dihitung dari data evaluasi terverifikasi',
+    accuracy,
+    accuracyStatus:  totalChecks > 0 ? 'estimated' : 'placeholder',
+    accuracyMessage: 'Estimasi berdasarkan rata-rata confidence model',
+
   };
 };
 

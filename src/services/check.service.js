@@ -18,31 +18,17 @@ const hashContent = (text) => {
 const runCheck = async ({ userId = null, text }) => {
   const contentHash = hashContent(text);
 
-  // 1. Check for existing result (cache by content hash)
   let check = await prisma.check.findUnique({ where: { contentHash } });
 
   if (!check) {
-    // 2. Call FastAPI /predict
     const prediction = await aiService.predict(text);
 
-    // Normalize label dan confidence
-    const rawLabel = prediction.label;
-    const rawConfidence = prediction.confidence;
+    // langsung pakai dari FastAPI, tidak perlu reverse lagi
+    const normalizedLabel = prediction.label === 'bukan_hoaks' ? 'valid' : 'hoaks';
+    const normalizedConfidence = prediction.confidence;
 
-    let normalizedLabel;
-    let normalizedConfidence;
+    // hapus semua blok if/else rawLabel di sini
 
-    if (rawLabel === 'bukan_hoaks') {
-      // reverse: confidence 0.0102 → 1 - 0.0102 = 0.9898 (valid)
-      normalizedConfidence = parseFloat((1 - rawConfidence).toFixed(4));
-      normalizedLabel = normalizedConfidence <= 0.49 ? 'hoaks' : 'valid';
-    } else {
-      // hoaks: confidence tetap
-      normalizedConfidence = rawConfidence;
-      normalizedLabel = 'hoaks';
-    }
-
-    // 3. Save new Check result
     check = await prisma.check.create({
       data: {
         contentHash,
@@ -52,19 +38,13 @@ const runCheck = async ({ userId = null, text }) => {
         confidenceLevel: prediction.confidence_level,
         suspiciousWords: prediction.top_suspicious_words,
         wordScores: prediction.attention_per_word,
-        userId, // Associate with user for history (optional, can be null if we want global cache)
+        ...(userId && { userId }),
       },
     });
   }
 
-  // 4. Record in UserHistory
-  // await prisma.userHistory.create({
-  //   data: { userId, checkId: check.id },
-  // });
-
   return formatCheck(check);
 };
-
 
 /**
  * Get all history for a user
