@@ -13,7 +13,14 @@ const Navbar = () => {
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between h-16">
         <div className="flex items-center gap-12 h-full">
-          <Link to="/" onClick={closeMenu} className="font-bold text-xl tracking-wide text-gray-900">FAKESHIELD</Link>
+          <Link to="/" onClick={closeMenu} className="flex items-center gap-2 group">
+            <div className="w-8 h-8 bg-[#1E293B] rounded-lg flex items-center justify-center shadow-sm group-hover:bg-slate-800 transition-colors">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <span className="font-bold text-xl tracking-wide text-gray-900">FAKESHIELD</span>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6 h-full">
