@@ -1,17 +1,27 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/',
+  baseURL: '',
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor: otomatis attach JWT token ke setiap request
+// Instance khusus untuk request publik (tanpa token)
+export const publicApi = axios.create({
+  baseURL: '',
+  timeout: 15000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor: otomatis attach JWT token ke setiap request pada instance 'api'
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('fs_token');
+    // Ambil token dari storage mana pun yang ada
+    const token = localStorage.getItem('fs_token') || sessionStorage.getItem('fs_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -20,14 +30,15 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: handle token expired
+// Response interceptor: handle token expired pada instance 'api'
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('fs_token');
-      localStorage.removeItem('fs_user');
-      window.location.href = '/auth';
+      // Bersihkan seluruh kemungkinan storage secara agresif
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.replace('/auth');
     }
     return Promise.reject(error);
   }

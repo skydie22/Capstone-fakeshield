@@ -1,15 +1,21 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import api from '../api/axios';
-import { getCategory, formatDate } from '../utils/helpers';
+import { getCategory, formatDate, normalizeCheckResult } from '../utils/helpers';
 import { useAuth } from '../hooks/useAuth';
 
-const COLORS = {
-  'Sangat Terindikasi Hoaks': '#DC2626',
-  'Terindikasi Hoaks': '#EA580C',
-  'Perlu Verifikasi': '#D97706',
-  'Kemungkinan Valid': '#16A34A',
+// Production Modular Components
+import { CATEGORIES, COLORS as APP_COLORS } from '../constants/categories';
+import ConfidenceBar from '../components/ConfidenceBar';
+import WordAttentionChart from '../components/WordAttentionChart';
+import ArticleTextCard from '../components/ArticleTextCard';
+
+const PIE_COLORS = {
+  'Sangat Terindikasi Hoaks': APP_COLORS.danger,
+  'Terindikasi Hoaks': APP_COLORS.warning,
+  'Perlu Verifikasi': APP_COLORS.caution,
+  'Kemungkinan Valid': APP_COLORS.success,
 };
 
 const CustomTooltip = ({ active, payload }) => {
@@ -24,126 +30,6 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
-const WordAttentionChart = ({ wordScores }) => {
-  const chartData = useMemo(() => {
-    if (!wordScores) return [];
-    return Object.entries(wordScores)
-      .map(([word, score]) => ({ word, score }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
-  }, [wordScores]);
-
-  if (chartData.length === 0) return null;
-
-  return (
-    <div className="h-[250px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={chartData}
-          layout="vertical"
-          margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
-          <XAxis type="number" hide />
-          <YAxis 
-            dataKey="word" 
-            type="category" 
-            width={80} 
-            tick={{ fontSize: 11, fontWeight: 600, fill: '#4B5563' }}
-          />
-          <Tooltip 
-            cursor={{ fill: 'transparent' }}
-            content={({ active, payload }) => {
-              if (active && payload && payload.length) {
-                return (
-                  <div className="bg-[#1E293B] text-white px-3 py-1.5 rounded shadow-lg text-[10px] font-bold uppercase tracking-wider">
-                    Score: {(payload[0].value * 100).toFixed(1)}%
-                  </div>
-                );
-              }
-              return null;
-            }}
-          />
-          <Bar 
-            dataKey="score" 
-            fill="#EAB308" 
-            radius={[0, 4, 4, 0]} 
-            barSize={18}
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-};
-
-const ConfidenceBar = ({ value, colorClass }) => {
-  return (
-    <div className="mt-6">
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-sm font-semibold text-gray-700 tracking-wide uppercase">Keyakinan Model AI</span>
-        <span className="text-lg font-bold text-gray-900">{Math.round(value)}%</span>
-      </div>
-      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-        <div
-          className={`h-3 rounded-full animate-bar-fill ${colorClass}`}
-          style={{ '--bar-width': `${value}%`, width: `${value}%` }}
-        />
-      </div>
-    </div>
-  );
-};
-
-const ArticleTextCard = ({ text, suspiciousWords }) => {
-  const [showFull, setShowFull] = useState(false);
-  const isLong = text && text.length > 500;
-  const displayText = isLong && !showFull ? text.slice(0, 500) + '...' : text;
-
-  const highlightText = (txt, words) => {
-    if (!words || words.length === 0 || !txt) return txt;
-    
-    // Sort words by length descending to match longer phrases first
-    const sortedWords = [...words].sort((a, b) => b.length - a.length);
-    // Escape regex special chars
-    const escapedWords = sortedWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const regex = new RegExp(`\\b(${escapedWords.join('|')})\\b`, 'gi');
-    
-    const parts = txt.split(regex);
-    
-    return parts.map((part, i) => {
-      if (sortedWords.some(w => w.toLowerCase() === part.toLowerCase())) {
-        return (
-          <mark key={i} className="bg-yellow-200 text-yellow-900 px-1 rounded-sm font-medium">
-            {part}
-          </mark>
-        );
-      }
-      return part;
-    });
-  };
-
-  return (
-    <div className="bg-white rounded-xl p-8 border border-gray-200 mt-6 shadow-sm">
-      <div className="flex items-center gap-3 mb-5">
-        <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-        <h3 className="font-bold text-gray-900 uppercase text-[13px] tracking-widest">TEKS YANG DIANALISIS</h3>
-      </div>
-      <div className="text-gray-700 leading-relaxed text-[15px] bg-slate-50 rounded-xl p-6 border border-gray-100 whitespace-pre-wrap font-serif">
-        {highlightText(displayText, suspiciousWords)}
-      </div>
-      {isLong && (
-        <div className="mt-4 flex justify-center border-t border-gray-100 pt-4">
-          <button
-            onClick={() => setShowFull(!showFull)}
-            className="text-xs font-bold text-gray-900 tracking-widest uppercase hover:text-gray-600 transition-colors"
-          >
-            {showFull ? 'Tampilkan Lebih Sedikit' : 'Tampilkan Teks Lengkap'}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
-
 const ResultPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -152,20 +38,15 @@ const ResultPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
-  const [categoriesData, setCategoriesData] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const [resultRes, catRes] = await Promise.all([
-          api.get(`/api/checks/${id}`),
-          api.get('/api/categories').catch(() => ({ data: { data: [] } }))
-        ]);
-        
-        setResult(resultRes.data?.data || resultRes.data);
-        setCategoriesData(catRes.data?.data || catRes.data || []);
+        const response = await api.get(`/api/checks/${id}`);
+        const rawResult = response.data?.data || response.data;
+        setResult(normalizeCheckResult(rawResult));
       } catch (err) {
         setError(err.response?.status === 404 ? 'Data tidak ditemukan' : 'Terjadi kesalahan');
       } finally {
@@ -179,6 +60,7 @@ const ResultPage = () => {
   }, [id]);
 
   if (loading) {
+    // ... skeleton code tetap sama ...
     return (
       <div className="max-w-4xl mx-auto px-6 py-10 animate-pulse">
         <div className="h-4 w-48 bg-gray-200 rounded mb-8" />
@@ -188,14 +70,15 @@ const ResultPage = () => {
           <div className="h-4 w-3/4 bg-gray-200 rounded" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <div className="bg-white rounded-xl p-6 border border-gray-200 h-64 bg-gray-50" />
-          <div className="bg-white rounded-xl p-6 border border-gray-200 h-64 bg-gray-50" />
+          <div className="bg-white rounded-xl p-6 border border-gray-200 h-64" />
+          <div className="bg-white rounded-xl p-6 border border-gray-200 h-64" />
         </div>
       </div>
     );
   }
 
   if (error || !result) {
+    // ... error code tetap sama ...
     return (
       <div className="flex flex-col items-center justify-center py-32 px-4">
         <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
@@ -210,7 +93,22 @@ const ResultPage = () => {
     );
   }
 
-  const category = getCategory(result.confidence);
+  const category = getCategory(result.confidence, result.label, result.confidenceLevel);
+  
+  // Data Donut per ID: Membandingkan Keyakinan vs Sisa (Probability Distribution)
+  const isHoaks = result.label?.toLowerCase() === 'hoaks';
+  const confidenceData = [
+    { 
+      name: isHoaks ? 'Indikasi Hoaks' : 'Indikasi Valid', 
+      value: Math.round(result.confidence * 100),
+      fill: category.hex || (isHoaks ? APP_COLORS.danger : APP_COLORS.success)
+    },
+    { 
+      name: isHoaks ? 'Indikasi Valid' : 'Indikasi Hoaks', 
+      value: Math.round((1 - result.confidence) * 100),
+      fill: isHoaks ? '#DCFCE7' : '#FEE2E2' // Warna kontras yang lembut
+    }
+  ];
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10 pb-20">
@@ -251,17 +149,17 @@ const ResultPage = () => {
         <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm h-full flex flex-col">
           <div className="flex items-center gap-3 mb-6">
             <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-            <h3 className="font-bold text-gray-900 uppercase text-[13px] tracking-widest">VISUALISASI DATA HOAKS</h3>
+            <h3 className="font-bold text-gray-900 uppercase text-[13px] tracking-widest">VISUALISASI DATA {isHoaks ? 'HOAKS' : 'VALID'}</h3>
           </div>
           
           <div className="flex-1">
             {result.wordScores && Object.keys(result.wordScores).length > 0 ? (
               <>
                 <p className="text-[11px] text-gray-500 mb-6 uppercase tracking-wider font-semibold">Tingkat Pengaruh Kata Terhadap Prediksi AI</p>
-                <WordAttentionChart wordScores={result.wordScores} />
+                <WordAttentionChart wordScores={result.wordScores} variant={isHoaks ? 'hoaks' : 'valid'} />
                 <div className="bg-blue-50 text-blue-800 p-4 rounded-lg text-sm flex items-start gap-3 mt-4">
                    <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                   <p>Grafik ini menunjukkan kata-kata yang paling memengaruhi model AI dalam menentukan apakah berita ini hoaks atau valid.</p>
+                   <p>Grafik ini menunjukkan kata-kata yang paling memengaruhi model AI dalam menentukan apakah berita ini {isHoaks ? 'hoaks' : 'valid'}.</p>
                 </div>
               </>
             ) : (
@@ -275,37 +173,63 @@ const ResultPage = () => {
           </div>
         </div>
         
-        {/* Right: Category Distribution */}
+        {/* Right: Confidence Composition */}
         <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm h-full flex flex-col">
           <div className="flex items-center gap-3 mb-2">
             <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
-            <h3 className="font-bold text-gray-900 uppercase text-[13px] tracking-widest">DISTRIBUSI KATEGORI</h3>
+            <h3 className="font-bold text-gray-900 uppercase text-[13px] tracking-widest">KOMPOSISI ANALISIS</h3>
           </div>
-          <p className="text-[13px] text-gray-500 mb-6">Berdasarkan semua analisis di platform</p>
+          <p className="text-[13px] text-gray-500 mb-6">Distribusi keyakinan model untuk artikel ini</p>
           
           <div className={`rounded-lg p-4 mb-4 border flex items-center gap-3 ${category.bgLightClass} ${category.borderClass} border-opacity-30`}>
             <span className="text-xl">{category.emoji}</span>
             <p className="text-sm text-gray-800">
-              Hasil kamu masuk kategori <strong className="font-bold">{category.label}</strong>
+              Hasil utama: <strong className="font-bold">{category.label}</strong>
             </p>
           </div>
 
-          <div className="flex-1 flex items-center justify-center min-h-[220px]">
-            {categoriesData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie data={categoriesData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} dataKey="count" nameKey="name" stroke="none">
-                    {categoriesData.map((entry) => (
-                      <Cell key={entry.name} fill={COLORS[entry.name] || '#94A3B8'} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend iconType="circle" iconSize={8} wrapperStyle={{fontSize: 12}} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-               <p className="text-sm text-gray-400">Data distribusi tidak tersedia</p>
-            )}
+          <div className="flex-1 relative flex items-center justify-center min-h-[220px]">
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie 
+                  data={confidenceData} 
+                  cx="50%" 
+                  cy="50%" 
+                  innerRadius={65} 
+                  outerRadius={85} 
+                  paddingAngle={8}
+                  dataKey="value" 
+                  nameKey="name" 
+                  stroke="none"
+                >
+                  {confidenceData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-md">
+                          <p className="font-bold text-xs text-gray-900 uppercase tracking-widest">{payload[0].name}</p>
+                          <p className="text-gray-600 text-[11px] mt-1 font-bold">{payload[0].value}% Keyakinan</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }} 
+                />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{fontSize: 10, paddingTop: 15}} />
+              </PieChart>
+            </ResponsiveContainer>
+            
+            {/* Label Tengah Donut */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
+              <span className="text-[22px] font-black text-gray-900 leading-none">
+                {Math.round(result.confidence * 100)}%
+              </span>
+              <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-1">Confidence</span>
+            </div>
           </div>
         </div>
       </div>
@@ -315,7 +239,6 @@ const ResultPage = () => {
 
       {/* SECTION D: Recommendation Card */}
       <div className="bg-[#1E293B] text-white rounded-xl p-8 mt-6 shadow-md relative overflow-hidden">
-        {/* Abstract background shape */}
         <svg className="absolute top-0 right-0 transform translate-x-1/3 -translate-y-1/3 w-64 h-64 text-white opacity-5" fill="currentColor" viewBox="0 0 100 100"><path d="M50 0C22.4 0 0 22.4 0 50s22.4 50 50 50 50-22.4 50-50S77.6 0 50 0zm0 80c-16.5 0-30-13.5-30-30s13.5-30 30-30 30 13.5 30 30-13.5 30-30 30z"/></svg>
         
         <div className="relative z-10">
@@ -352,7 +275,10 @@ const ResultPage = () => {
       <div className="mt-16 flex flex-col items-center justify-center border-t border-gray-200 pt-10">
         <h4 className="text-lg font-bold text-gray-900 mb-6">Ingin cek berita lainnya?</h4>
         <div className="flex flex-col sm:flex-row gap-4">
-          <button onClick={() => navigate('/')} className="bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center gap-2">
+          <button 
+            onClick={() => navigate('/#check-section')} 
+            className="bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center gap-2"
+          >
              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
              Cek Artikel Lain
           </button>

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Dashboard from './pages/Dashboard';
+import News from './pages/News';
 import ResultPage from './pages/ResultPage';
 import Auth from './pages/Auth';
 import History from './pages/History';
@@ -27,6 +28,7 @@ function AppContent() {
       <main className="flex-1 flex flex-col">
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/news" element={<News />} />
           <Route path="/result/:id" element={<ResultPage />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/history" element={<History />} />

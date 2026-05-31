@@ -16,7 +16,7 @@ const ConfidenceBar = ({ value, colorClass }) => (
 );
 
 const ResultCard = ({ result, onBack }) => {
-  const category = getCategory(result.confidence);
+  const category = getCategory(result.confidence, result.label);
 
   return (
     <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">

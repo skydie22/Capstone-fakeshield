@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import api from '../api/axios';
+import api, { publicApi } from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
@@ -11,12 +11,6 @@ const CheckForm = ({ onResult, onLoading }) => {
   const { isAuthenticated } = useAuth();
 
   const handleSubmit = async () => {
-    if (!isAuthenticated) {
-      setError('Silakan login terlebih dahulu untuk melakukan analisis berita.');
-      navigate('/auth');
-      return;
-    }
-
     if (text.length < 10) {
       setError('Teks terlalu pendek. Masukkan minimal 10 karakter.');
       return;
@@ -27,10 +21,15 @@ const CheckForm = ({ onResult, onLoading }) => {
     if (onLoading) onLoading(true);
 
     try {
-      const response = await api.post('/api/checks', { text });
+      // Gunakan publicApi jika tidak login, atau api jika login (untuk simpan history)
+      const axiosInstance = isAuthenticated ? api : publicApi;
+      const response = await axiosInstance.post('/api/checks', { text });
+      
+      const resultData = response.data?.data || response.data;
+      
       setText(''); // Kosongkan form
-      if (onResult) onResult(response.data.id);
-      // navigate(`/result/${response.data.id}`); // Navigasi dimatikan agar hasil muncul di dashboard
+      // Kirim seluruh objek data hasil ke dashboard agar bisa langsung ditampilkan tanpa fetch lagi
+      if (onResult) onResult(resultData);
     } catch (err) {
       setError(err.response?.data?.message || 'Terjadi kesalahan saat menganalisis. Pastikan server berjalan.');
     } finally {
@@ -51,8 +50,9 @@ const CheckForm = ({ onResult, onLoading }) => {
       </p>
 
       {!isAuthenticated && (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Pemeriksaan berita hanya tersedia untuk pengguna yang sudah login.
+        <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800 flex items-center gap-3">
+          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <p>Anda dapat melakukan analisis tanpa login. Hasil tidak akan disimpan di riwayat pribadi Anda.</p>
         </div>
       )}
 
@@ -73,7 +73,7 @@ const CheckForm = ({ onResult, onLoading }) => {
           disabled={isSubmitting || text.length === 0}
           className="bg-[#1E293B] text-white px-6 py-3 rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
         >
-          {isSubmitting ? 'Menganalisis...' : isAuthenticated ? 'Periksa Sekarang' : 'Login untuk Memeriksa'}
+          {isSubmitting ? 'Menganalisis...' : 'Periksa Sekarang'}
           {!isSubmitting && (
             <svg className="w-4 h-4 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
           )}

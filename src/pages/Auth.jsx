@@ -92,7 +92,7 @@ const LeftBrandingPanel = ({ mode }) => (
     <div className="bg-[#E2E8F0]/40 rounded-xl p-6 border border-gray-200/60">
       <p className="text-gray-800 italic text-[14px] leading-relaxed mb-5 font-serif">
         {mode === 'register' 
-          ? '"Framework ini memberikan fondasi yang sangat kuat bagi integritas UX aplikasi kami."' 
+          ? 'FakeShield memberikan ketenangan pikiran dalam mengelola aset digital kami. Keandalan sistemnya tidak tertandingi dalam kategori ini."' 
           : '"FakeShield memberikan ketenangan pikiran dalam mengelola aset digital kami. Keandalan sistemnya tidak tertandingi dalam kategori ini."'}
       </p>
       <div className="flex items-center gap-3">
@@ -100,8 +100,8 @@ const LeftBrandingPanel = ({ mode }) => (
            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path></svg>
         </div>
         <div>
-          <p className="text-[13px] font-bold text-gray-900">{mode === 'register' ? 'Desainer Senior' : 'Aditya Pratama'}</p>
-          <p className="text-[12px] text-gray-500">{mode === 'register' ? 'Wireframe Framework Corp.' : 'CTO, TechVision Corp'}</p>
+          <p className="text-[13px] font-bold text-gray-900">{mode === 'register' ? 'FAKESHIELD' : 'FAKESHIELD'}</p>
+          <p className="text-[12px] text-gray-500">{mode === 'register' ? 'Dicoding by DBS' : 'Dicoding by DBS'}</p>
         </div>
       </div>
     </div>
@@ -140,6 +140,7 @@ function LoginForm({ onSuccess, onError }) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [remember, setRemember] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -151,7 +152,8 @@ function LoginForm({ onSuccess, onError }) {
     }
     setIsLoading(true);
     try {
-      await login(formData.email, formData.password);
+      // Kirim parameter remember (boolean) ke fungsi login
+      await login(formData.email, formData.password, remember);
       onSuccess('Berhasil masuk!');
     } catch (err) {
       onError(err.message || 'Email atau kata sandi salah');
@@ -189,7 +191,6 @@ function LoginForm({ onSuccess, onError }) {
         <div>
           <div className="flex justify-between items-center mb-1.5">
              <label className="block text-[13px] font-medium text-gray-700">Kata Sandi</label>
-             <a href="#" className="text-[12px] font-medium text-gray-500 hover:text-gray-800">Lupa password?</a>
           </div>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
@@ -212,10 +213,21 @@ function LoginForm({ onSuccess, onError }) {
           </div>
         </div>
         
-        {/* Remember me */}
-        <div className="flex items-center">
-          <input id="remember" type="checkbox" className="w-4 h-4 text-[#334155] border-gray-300 rounded focus:ring-[#334155] cursor-pointer" />
-          <label htmlFor="remember" className="ml-2 text-[13px] text-gray-600 cursor-pointer">Tetap masuk selama 30 hari</label>
+        {/* Remember me (Logic Updated) */}
+        <div className="flex items-center group cursor-pointer bg-gray-50 hover:bg-gray-100 p-3 rounded-lg border border-gray-100 transition-colors">
+          <div className="flex items-center flex-1">
+            <input 
+              id="remember" 
+              type="checkbox" 
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              className="w-4 h-4 text-[#334155] border-gray-300 rounded focus:ring-[#334155] cursor-pointer" 
+            />
+            <label htmlFor="remember" className="ml-3 text-[13px] text-gray-700 font-bold uppercase tracking-wider cursor-pointer select-none">
+              Tetap masuk selama 7 hari
+            </label>
+          </div>
+          <div className={`w-2 h-2 rounded-full transition-colors ${remember ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
         </div>
       </div>
 
@@ -252,18 +264,23 @@ function RegisterForm({ onSuccess, onError }) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [isLoading, setIsLoading] = useState(false);
-  const [agreed, setAgreed] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.password) {
       onError('Semua field wajib diisi'); return;
     }
+    
+    // Validasi Password (sesuai backend)
+    if (formData.password.length < 8) {
+      onError('Kata sandi minimal harus 8 karakter'); return;
+    }
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      onError('Kata sandi harus mengandung huruf besar, huruf kecil, dan angka'); return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       onError('Konfirmasi kata sandi tidak cocok'); return;
-    }
-    if (!agreed) {
-      onError('Anda harus menyetujui syarat & ketentuan'); return;
     }
     
     setIsLoading(true);
@@ -271,7 +288,12 @@ function RegisterForm({ onSuccess, onError }) {
       const result = await register(formData.name, formData.email, formData.password);
       onSuccess(result.message || 'Akun berhasil dibuat!');
     } catch (err) {
-      onError(err.message || 'Gagal mendaftar. Email mungkin sudah digunakan.');
+      // Jika error dari backend berupa array (express-validator)
+      if (err.response?.data?.errors) {
+        onError(err.response.data.errors[0].message);
+      } else {
+        onError(err.message || 'Gagal mendaftar. Email mungkin sudah digunakan.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -333,20 +355,6 @@ function RegisterForm({ onSuccess, onError }) {
             />
           </div>
         </div>
-
-        {/* Terms */}
-        <div className="flex items-start pt-1">
-          <input 
-             id="terms" 
-             type="checkbox" 
-             checked={agreed}
-             onChange={(e) => setAgreed(e.target.checked)}
-             className="mt-1 w-4 h-4 text-[#334155] border-gray-300 rounded focus:ring-[#334155] cursor-pointer" 
-          />
-          <label htmlFor="terms" className="ml-2.5 text-[13px] text-gray-600 cursor-pointer leading-tight">
-            Saya menyetujui <span className="font-semibold text-gray-900 underline">Syarat Layanan</span> dan <span className="font-semibold text-gray-900 underline">Kebijakan Privasi</span> FakeShield.
-          </label>
-        </div>
       </div>
 
       <div className="space-y-3 pt-2">
@@ -369,7 +377,7 @@ function RegisterForm({ onSuccess, onError }) {
         </button>
 
         <p className="text-[11px] text-center text-gray-400 mt-2">
-          Mode tamu hanya untuk melihat dashboard publik. Login diperlukan untuk analisis berita dan riwayat pemeriksaan.
+          Mode tamu memungkinkan analisis instan. Login diperlukan untuk akses statistik global, riwayat lengkap, dan detail laporan mendalam.
         </p>
       </div>
     </form>
@@ -415,6 +423,15 @@ const Auth = () => {
       {/* Right Panel (Scrollable area) */}
       <div className="flex-1 flex flex-col items-center justify-between p-6 sm:p-12 lg:p-16 h-screen overflow-y-auto">
         
+        {/* Mobile-only Branding Header */}
+        <div className="lg:hidden w-full max-w-[440px] mt-4 mb-10 text-center animate-fade-in">
+           <div className="inline-block px-3 py-1 rounded-full bg-slate-50 border border-slate-100 mb-4">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Dicoding by DBS</p>
+           </div>
+           <h1 className="text-3xl font-black text-[#1E293B] tracking-tighter mb-2">FakeShield</h1>
+           <p className="text-[13px] font-medium text-slate-500 italic">"Amankan langkah digital Anda sekarang."</p>
+        </div>
+
         {/* Inner Centered Container */}
         <div className="w-full max-w-[440px] flex-1 flex flex-col justify-center my-auto pt-4">
           
@@ -446,26 +463,6 @@ const Auth = () => {
 
           {/* Shared OAuth Section underneath the forms */}
           <div className="w-full mt-8 animate-fade-in">
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-              <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
-                <span className="bg-white px-4 text-gray-400 font-bold">
-                  {mode === 'login' ? 'ATAU LANJUTKAN DENGAN' : 'ATAU DAFTAR DENGAN'}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-8">
-               <button type="button" className="flex items-center justify-center gap-2 py-2.5 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-[13px] font-medium text-gray-700 shadow-sm">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
-                  Google
-               </button>
-               <button type="button" className="flex items-center justify-center gap-2 py-2.5 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-[13px] font-medium text-gray-700 shadow-sm">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
-                  Github
-               </button>
-            </div>
-
             <p className="text-center text-[13px] text-gray-500 mb-6">
               {mode === 'login' ? 'Belum punya akun? ' : 'Sudah punya akun? '}
               <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="font-bold text-gray-900 hover:underline">
@@ -476,15 +473,8 @@ const Auth = () => {
         </div>
 
         {/* Minimal Footer below form */}
-        <footer className="w-full max-w-[440px] mt-10 pt-6 flex flex-col items-center justify-center text-[10px] text-gray-400 font-semibold tracking-widest uppercase border-t border-gray-100">
-          <p className="mb-3">&copy; 2026 FAKESHIELD. WIREFRAME FRAMEWORK.</p>
-          <div className="flex gap-4">
-            <a href="#" className="hover:text-gray-900 transition-colors">TERMS</a>
-            <span>&bull;</span>
-            <a href="#" className="hover:text-gray-900 transition-colors">PRIVACY</a>
-            <span>&bull;</span>
-            <a href="#" className="hover:text-gray-900 transition-colors">SUPPORT</a>
-          </div>
+        <footer className="w-full max-w-[500px] mt-10 pt-6 flex flex-col items-center justify-center text-[10px] text-gray-400 font-semibold tracking-widest uppercase border-t border-gray-100">
+          <p className="mb-3">&copy; 2026 FAKESHIELD</p>
         </footer>
 
       </div>

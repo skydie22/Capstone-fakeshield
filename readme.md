@@ -1,134 +1,143 @@
-# 🛡️ FakeShield Frontend
+# 🛡️ FakeShield Master Technical Documentation
+> **PANDUAN KOMPREHENSIF FRONTEND — Tim CC26-PSU184**
 
-> **Platform Deteksi Berita Hoaks Berbasis AI (Natural Language Processing)**
-
-FakeShield adalah aplikasi web modern yang dirancang untuk membantu masyarakat memverifikasi kebenaran informasi. Menggunakan teknologi **AI (Deep Learning)**, platform ini menganalisis karakteristik teks untuk memberikan skor keyakinan apakah sebuah berita tergolong hoaks atau valid.
-
----
-
-## ✨ Fitur Utama
-
-- **🔍 Deteksi Real-time**: Masukkan teks berita dan dapatkan hasil analisis dalam hitungan detik.
-- **📊 Visualisasi Word Attention**: Lihat kata-kata mana yang paling memengaruhi keputusan AI dalam mendeteksi hoaks.
-- **📈 Dashboard Statistik**: Pantau tren penyebaran hoaks secara global dan kategori distribusi hasil pemeriksaan.
-- **🕒 Riwayat Pemeriksaan**: Simpan dan akses kembali hasil pemeriksaan Anda kapan saja.
-- **📰 Berita Terkini**: Integrasi dengan NewsAPI untuk menyajikan berita terbaru yang sedang hangat.
-- **📱 Responsive Design**: Tampilan yang optimal di perangkat desktop maupun mobile.
+FakeShield adalah platform deteksi berita hoaks berbasis **Natural Language Processing (NLP)** yang dirancang untuk memperkuat literasi digital masyarakat Indonesia. Dokumentasi ini memberikan panduan teknis mendalam mengenai arsitektur, spesifikasi UI/UX, dan logika bisnis frontend.
 
 ---
 
-## 🚀 Tech Stack
+## 🏗️ 1. Arsitektur & Alur Data
 
-Frontend ini dibangun dengan teknologi modern untuk performa dan pengalaman pengguna yang maksimal:
-
-- **Core**: [React.js 19](https://react.dev/) & [Vite](https://vitejs.dev/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) (Utility-first CSS framework)
-- **Routing**: [React Router DOM v6](https://reactrouter.com/)
-- **Data Visualization**: [Recharts](https://recharts.org/)
-- **HTTP Client**: [Axios](https://axios-http.com/)
-- **State Management**: React Context API (untuk Autentikasi)
-- **Icons**: SVG based icons
-
----
-
-## 🛠️ Persiapan Lingkungan
-
-### Prasyarat
-- [Node.js](https://nodejs.org/) (versi 18 ke atas disarankan)
-- [npm](https://www.npmjs.com/) atau [yarn](https://yarnpkg.com/)
-
-### Instalasi
-1. Clone repositori ini:
-   ```bash
-   git clone <repository-url>
-   ```
-2. Masuk ke direktori project:
-   ```bash
-   cd fakeshield-frontend
-   ```
-3. Instal dependensi:
-   ```bash
-   npm install
-   ```
-
-### Konfigurasi Environment
-Buat file `.env` di root direktori `fakeshield-frontend` dan tambahkan variabel berikut:
-```env
-VITE_API_URL=http://localhost:5000
-```
-*Sesuaikan URL dengan alamat backend Express Anda.*
-
----
-
-## 🏃 Memulai Pengembangan
-
-Jalankan server pengembangan lokal:
-```bash
-npm run dev
-```
-Aplikasi akan berjalan di `http://localhost:5173`.
-
-### Perintah Lainnya
-- `npm run build`: Membangun aplikasi untuk produksi (output di folder `dist`).
-- `npm run lint`: Menjalankan linter untuk mengecek kualitas kode.
-- `npm run preview`: Melihat hasil build produksi secara lokal.
-
----
-
-## 📁 Struktur Proyek
+Frontend dirancang dengan pola **Backend-for-Frontend (BFF)**, di mana aplikasi React berinteraksi dengan sebuah Express.js Middleware sebelum akhirnya mencapai Service AI.
 
 ```text
-fakeshield-frontend/
-├── public/              # Aset publik (favicon, dll)
-├── src/
-│   ├── api/             # Konfigurasi Axios & interceptor
-│   ├── assets/          # Gambar dan file statis
-│   ├── components/      # Komponen UI reusable (Navbar, StatCard, dll)
-│   ├── context/         # AuthContext untuk manajemen session
-│   ├── hooks/           # Custom React Hooks
-│   ├── pages/           # Komponen Halaman (Dashboard, History, Result, Auth)
-│   ├── utils/           # Helper functions & formatters
-│   ├── App.jsx          # Root routing & layout
-│   └── main.jsx         # Entry point aplikasi
-├── .env                 # Variabel lingkungan (API URL)
-├── tailwind.config.js   # Konfigurasi Tailwind CSS
-└── vite.config.js       # Konfigurasi Vite
+[ CLIENT SIDE ]             [ MIDDLEWARE LAYER ]          [ AI ENGINE ]
+React (Vite)  ───────────▶  Express.js (BFF)  ─────────▶  FastAPI (NLP)
+(Tailwind CSS)              (Prisma/Postgres)             (TensorFlow/Keras)
+```
+
+- **Client Side**: Menangani visualisasi data, interaksi pengguna, dan manajemen session.
+- **Middleware**: Menangani autentikasi (JWT), penyimpanan riwayat, dan agregasi data statistik.
+- **AI Engine**: Core engine yang memproses teks menggunakan model Deep Learning.
+
+---
+
+## 🎨 2. Spesifikasi Desain (UI/UX)
+
+### 💎 Identitas Visual
+Aplikasi mengusung konsep **"Clean & Trustworthy"** dengan aksen warna fungsional untuk merepresentasikan tingkat bahaya informasi.
+
+- **Sistem Warna**:
+  - `Neutral`: Slate-900 (Text), Gray-50 (Background), Gray-200 (Border).
+  - `Danger`: Red-600 (#DC2626) — Sangat Terindikasi Hoaks.
+  - `Warning`: Orange-600 (#EA580C) — Terindikasi Hoaks.
+  - `Caution`: Yellow-500 (#EAB308) — Perlu Verifikasi.
+  - `Success`: Green-600 (#16A34A) — Kemungkinan Valid.
+
+### 🖋️ Tipografi
+- **Sans-Serif**: Inter / System Sans (untuk UI, tombol, dan navigasi).
+- **Serif**: Georgia / Times New Roman (khusus untuk teks berita yang dianalisis agar menyerupai koran fisik).
+
+---
+
+## ⚙️ 3. Spesifikasi Teknis
+
+### 📦 Core Library
+- **React 19**: Framework utama dengan arsitektur Functional Components.
+- **Vite 8**: Tooling build untuk performa pengembangan super cepat.
+- **Tailwind CSS 3**: Framework CSS untuk styling modular dan responsif.
+- **Axios**: Library HTTP dengan implementasi *Request/Response Interceptors*.
+- **Recharts**: Library visualisasi data untuk Tren dan Distribusi Kategori.
+
+### 🔐 Manajemen Session (Auth)
+Autentikasi dikelola melalui `AuthContext` yang menyediakan state global:
+- `user`: Objek profil pengguna (id, name, email).
+- `token`: JWT yang disimpan secara persisten di `localStorage`.
+- `isAuthenticated`: Flag untuk proteksi rute (Guarded Routes).
+
+---
+
+## 📂 4. Arsitektur Folder
+
+```text
+src/
+├── api/          # Konfigurasi Axios & Centralized API Calls
+├── components/   # Atomic Design:
+│   ├── Navbar    # Navigasi utama & User Profile
+│   ├── CheckForm # Input teks & Logic submission
+│   ├── StatCard  # Komponen kecil penampil angka
+│   └── ResultCard# Ringkasan hasil analisis
+├── context/      # AuthContext: Provider data global
+├── hooks/        # Custom hooks (useAuth, useChecks)
+├── pages/        # Komponen Halaman:
+│   ├── Dashboard # Utama: Statistik & Form input
+│   ├── Result    # Detail: Visualisasi Word Attention
+│   ├── History   # Riwayat: Daftar pemeriksaan user
+│   └── Auth      # Login & Register
+└── utils/        # Helper functions & Logic Category Mapping
 ```
 
 ---
 
-## 📡 Panduan Integrasi API (Developer Guide)
+## 📡 5. Referensi API & Kontrak Data
 
-Frontend berkomunikasi dengan Backend (Express.js) melalui REST API. Berikut adalah rute-rute utama yang digunakan:
+Aplikasi mewajibkan semua response backend memiliki struktur konsisten:
+`{ "success": boolean, "data": Object/Array, "message": string }`
 
-### 🔐 Autentikasi (`/api/auth`)
-- `POST /login`: Mendapatkan JWT Token.
-- `POST /register`: Pendaftaran user baru.
-- `GET /me`: Verifikasi status login & ambil profil user.
+### 🔹 Endpoint Autentikasi
+| Method | Endpoint | Deskripsi |
+| :--- | :--- | :--- |
+| `POST` | `/api/auth/register` | Pendaftaran akun baru |
+| `POST` | `/api/auth/login` | Mendapatkan JWT & User Profile |
+| `GET` | `/api/auth/me` | Validasi token & ambil data user login |
 
-### 🔍 Deteksi & Riwayat (`/api/checks` & `/api/history`)
-- `POST /api/checks`: Kirim teks untuk dianalisis.
-- `GET /api/checks/:id`: Ambil detail hasil analisis spesifik.
-- `GET /api/history`: Ambil daftar riwayat pemeriksaan (mendukung pagination).
+### 🔹 Endpoint Deteksi
+| Method | Endpoint | Deskripsi |
+| :--- | :--- | :--- |
+| `POST` | `/api/checks` | Kirim teks (`text`) untuk dianalisis AI |
+| `GET` | `/api/checks/:id` | Ambil detail hasil (termasuk `wordScores`) |
+| `GET` | `/api/history` | Riwayat user (Query: `page`, `limit`) |
 
-### 📊 Statistik (`/api/stats`, `/api/trends`, `/api/categories`)
-- `GET /api/stats`: Mengambil angka total checks, total hoaks, dan akurasi model.
-- `GET /api/trends`: Data grafik tren hoaks per hari (7 hari terakhir).
-- `GET /api/categories`: Distribusi hasil pemeriksaan berdasarkan tingkat keyakinan.
-
----
-
-## 🚨 Catatan Penting
-- **Token Security**: Token JWT disimpan di `localStorage` dengan key `fs_token`.
-- **Response Format**: Frontend mengharapkan response dalam format objek yang dibungkus properti `data` (misal: `res.data.data`).
-- **Error Handling**: Setiap error dari backend wajib mengirimkan field `message` untuk ditampilkan di UI.
+### 🔹 Endpoint Analytics
+- `GET /api/stats`: Mengembalikan `totalChecks`, `totalHoax`, `accuracy`.
+- `GET /api/trends`: Data array 7 hari terakhir untuk Area Chart.
+- `GET /api/categories`: Agregasi jumlah per kategori untuk Pie Chart.
 
 ---
 
-## 👥 Tim Pengembang (CC26-PSU184)
-- **Wahyu Alamsyah** - Frontend Developer
-- **Ezhar Mahesa** - Frontend Developer
-- **Maulana Dzaky** - AI/ML Engineer
+## 🧠 6. Logika Pemetaan Kategori (Business Logic)
+
+Frontend melakukan pemetaan otomatis berdasarkan skor `confidence` (0.0 - 1.0) yang diterima dari backend:
+
+| Skor Confidence | Label Kategori | Emoji | Penanganan UI |
+| :--- | :--- | :--- | :--- |
+| **≥ 0.90** | Sangat Terindikasi Hoaks | 🔴 | Warna Merah, Peringatan Keras |
+| **0.70 - 0.89** | Terindikasi Hoaks | 🟠 | Warna Oranye, Saran Verifikasi |
+| **0.50 - 0.69** | Perlu Verifikasi | 🟡 | Warna Kuning, Cek Fact-checker |
+| **< 0.50** | Kemungkinan Valid | 🟢 | Warna Hijau, Tetap Waspada |
 
 ---
-© 2026 FakeShield. Dibuat dengan ❤️ untuk Indonesia yang lebih cerdas informasi.
+
+## 🚀 7. Instalasi & Pengembangan
+
+### Setup Environment
+1. Clone repositori.
+2. Jalankan `npm install`.
+3. Buat file `.env`:
+   ```env
+   VITE_API_URL=http://localhost:5000
+   ```
+
+### Jalankan Aplikasi
+- **Dev Mode**: `npm run dev` (Akses di port 5173).
+- **Build**: `npm run build` (Output siap deploy di folder `dist`).
+
+---
+
+## 🛡️ 8. Keamanan & Performa
+- **JWT Guard**: Setiap request secara otomatis menyertakan token di header `Authorization`.
+- **Auto-Logout**: Jika API merespons status `401`, sistem akan menghapus session dan mengalihkan ke halaman login.
+- **Robust Data Handling**: Frontend mendukung dua format metadata pagination (`meta` atau `pagination`) untuk fleksibilitas integrasi.
+
+---
+© 2026 FakeShield. Dibuat dengan standar teknis tinggi oleh **Tim CC26-PSU184**.
+Indonesia Cerdas Informasi.

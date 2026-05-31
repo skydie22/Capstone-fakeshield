@@ -17,61 +17,25 @@ export const truncateText = (text, maxLength = 100) => {
   return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
 };
 
-// Konversi confidence score ke kategori
-export const getCategory = (confidence) => {
-  if (confidence >= 0.90) {
-    return {
-      label: 'Sangat Terindikasi Hoaks',
-      emoji: '🔴',
-      description: 'Artikel ini memiliki karakteristik hoaks yang sangat kuat berdasarkan analisis AI.',
-      colorClass: 'text-red-600',
-      textClass: 'text-red-600',
-      bgClass: 'bg-red-600',
-      bgLightClass: 'bg-red-50',
-      borderClass: 'border-red-600',
-      badgeClass: 'bg-red-100 text-red-800',
-      recommendation: 'Sangat disarankan untuk TIDAK menyebarkan konten ini. Laporkan ke Kominfo atau Mafindo.',
-    };
-  } else if (confidence >= 0.70) {
-    return {
-      label: 'Terindikasi Hoaks',
-      emoji: '🟠',
-      description: 'Artikel ini memiliki beberapa indikasi hoaks yang perlu diwaspadai.',
-      colorClass: 'text-orange-600',
-      textClass: 'text-orange-600',
-      bgClass: 'bg-orange-600',
-      bgLightClass: 'bg-orange-50',
-      borderClass: 'border-orange-500',
-      badgeClass: 'bg-orange-100 text-orange-800',
-      recommendation: 'Verifikasi ke sumber terpercaya sebelum menyebarkan konten ini.',
-    };
-  } else if (confidence >= 0.50) {
-    return {
-      label: 'Perlu Verifikasi',
-      emoji: '🟡',
-      description: 'Artikel ini memiliki beberapa elemen yang meragukan dan perlu dicek lebih lanjut.',
-      colorClass: 'text-yellow-600',
-      textClass: 'text-yellow-600',
-      bgClass: 'bg-yellow-500',
-      bgLightClass: 'bg-yellow-50',
-      borderClass: 'border-yellow-500',
-      badgeClass: 'bg-yellow-100 text-yellow-800',
-      recommendation: 'Periksa ke situs fact-checker seperti Cek Fakta Kompas atau Tempo Cek Fakta.',
-    };
-  } else {
-    return {
-      label: 'Kemungkinan Valid',
-      emoji: '🟢',
-      description: 'Artikel ini tampak tidak mengandung karakteristik hoaks yang signifikan.',
-      colorClass: 'text-green-600',
-      textClass: 'text-green-600',
-      bgClass: 'bg-green-600',
-      bgLightClass: 'bg-green-50',
-      borderClass: 'border-green-500',
-      badgeClass: 'bg-green-100 text-green-800',
-      recommendation: 'Tetap bijak dalam berbagi informasi. Selalu cek sumber sebelum menyebarkan.',
-    };
+import { CATEGORIES } from '../constants/categories';
+
+// Konversi confidence score ke kategori sesuai normalisasi backend
+export const getCategory = (confidence, label, confidenceLevel = null) => {
+  // Jika ada confidenceLevel dari backend, gunakan itu
+  if (confidenceLevel) {
+    const found = Object.values(CATEGORIES).find(c => c.label.toLowerCase() === confidenceLevel.toLowerCase());
+    if (found) return found;
   }
+
+  const normalizedLabel = label ? label.toLowerCase() : '';
+  
+  // Jika label adalah 'bukan_hoaks' atau 'valid'
+  if (normalizedLabel === 'valid' || normalizedLabel === 'bukan_hoaks') {
+    return CATEGORIES.VALID;
+  }
+  
+  // Default adalah HOAKS
+  return CATEGORIES.HOAKS;
 };
 
 // Format angka: 10234 -> "10.234"
@@ -98,4 +62,49 @@ export const timeAgo = (isoString) => {
   interval = seconds / 60;
   if (interval > 1) return Math.floor(interval) + " menit lalu";
   return Math.floor(seconds) + " detik lalu";
+};
+
+/**
+ * Normalisasi hasil check dari API agar kompatibel dengan komponen frontend
+ */
+export const normalizeCheckResult = (result) => {
+  if (!result) return null;
+
+  const normalized = { 
+    ...result,
+    // Petakan field snake_case (FastAPI) ke camelCase (Backend/Frontend)
+    id: result.id || result._id,
+    label: result.label || (result.confidence_raw >= 0.5 ? 'hoaks' : 'bukan_hoaks'),
+    confidence: typeof result.confidence === 'number' ? result.confidence : (result.confidence_raw || 0),
+    confidenceLevel: result.confidenceLevel || result.confidence_level || (result.label === 'hoaks' ? 'Hoaks' : 'Valid'),
+    wordScores: result.wordScores || result.attention_per_word || {}
+  };
+
+  // Handle suspiciousWords jika dalam format array of objects [{word, attention_score}]
+  const rawSuspicious = result.suspiciousWords || result.top_suspicious_words || [];
+  if (Array.isArray(rawSuspicious) && rawSuspicious.length > 0) {
+    if (typeof rawSuspicious[0] === 'object' && rawSuspicious[0] !== null) {
+      // 1. Jika wordScores belum ada, buat dari suspiciousWords
+      if (Object.keys(normalized.wordScores).length === 0) {
+        normalized.wordScores = rawSuspicious.reduce((acc, curr) => {
+          if (curr.word) {
+            acc[curr.word] = curr.attention_score || 0;
+          }
+          return acc;
+        }, {});
+      }
+
+      // 2. Ubah suspiciousWords menjadi array of strings untuk tag list dan highlighter
+      normalized.suspiciousWords = rawSuspicious.map(sw => sw.word).filter(Boolean);
+    } else {
+      normalized.suspiciousWords = rawSuspicious;
+    }
+  }
+
+  // Pastikan properti dasar ada untuk menghindari error rendering
+  if (!normalized.text) normalized.text = "";
+  if (!normalized.wordScores) normalized.wordScores = {};
+  if (!Array.isArray(normalized.suspiciousWords)) normalized.suspiciousWords = [];
+  
+  return normalized;
 };
