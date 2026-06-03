@@ -670,8 +670,12 @@ elif "Demo Prediksi" in page:
                     padded  = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=MAX_LEN, padding="post", truncating="post")
                     raw_feat = np.array([[rasio_kapital, jml_seru, jml_tanya, words_count]], dtype=np.float32)
                     num_feat = scaler.transform(raw_feat).astype("float32") if scaler else (raw_feat / np.array([[100., 20., 10., 200.]])).astype("float32")
-                    outputs  = model.predict([padded, num_feat], verbose=0)
-                    prob     = float(outputs[0][0][0])
+                    outputs = model.predict([padded, num_feat], verbose=0)
+
+                    st.write("OUTPUT 0 SHAPE:", np.array(outputs[0]).shape)
+                    st.write("OUTPUT 1 SHAPE:", np.array(outputs[1]).shape)
+
+                    prob = float(outputs[0][0][0])
                     attn_vec = np.array(outputs[1][0])
                     n = min(len(words_clean), MAX_LEN)
                     word_attn = {}
