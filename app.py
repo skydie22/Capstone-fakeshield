@@ -368,7 +368,7 @@ with st.sidebar:
     st.markdown(f"""
     <hr style='margin:1.5rem 0 1rem;'>
     <div style='font-size:0.75rem;color:rgba(255,255,255,0.4);line-height:1.7;'>
-        Dataset: 39.000 artikel<br>Periode: 2024–2026<br>
+        Dataset: 39.667 artikel<br>Periode: 2024–2026<br>
         Model: BiLSTM + Bahdanau Attention {_status_text}<br>Bahasa: Indonesia
     </div>
     """, unsafe_allow_html=True)
@@ -589,8 +589,6 @@ if "Dashboard" in page:
 # ══════════════════════════════════════════════════════════════════════════════
 elif "Demo Prediksi" in page:
     st.markdown("<div class='hero-banner'><h1 class='hero-title'>Demo Prediksi</h1></div>", unsafe_allow_html=True)
-
-
 
     section("Input Teks Berita", "Masukkan isi berita yang ingin diperiksa")
 

@@ -86,7 +86,7 @@ Buka di browser: `http://localhost:8501`
 
 | Properti | Nilai |
 |---|---|
-| Total artikel | ~39.000 |
+| Total artikel | ~339.667 |
 | Periode | 2024–2026 |
 | Bahasa | Indonesia |
-| Label | Hoaks & Valid (balanced) |
+| Label | Hoaks & Valid |
