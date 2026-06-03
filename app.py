@@ -671,18 +671,10 @@ elif "Demo Prediksi" in page:
                     raw_feat = np.array([[rasio_kapital, jml_seru, jml_tanya, words_count]], dtype=np.float32)
                     num_feat = scaler.transform(raw_feat).astype("float32") if scaler else (raw_feat / np.array([[100., 20., 10., 200.]])).astype("float32")
                     outputs = model.predict([padded, num_feat], verbose=0)
-
-                    st.write("OUTPUT 0 SHAPE:", np.array(outputs[0]).shape)
-                    st.write("OUTPUT 1 SHAPE:", np.array(outputs[1]).shape)
-
                     prob = float(outputs[0][0][0])
-
                     attn_vec = np.array(outputs[1]).squeeze()
-
                     n = min(len(words_clean), len(attn_vec), MAX_LEN)
-
                     word_attn = {}
-
                     for i in range(n):
                         w = words_clean[i]
                         word_attn[w] = word_attn.get(w, 0.0) + float(attn_vec[i])
